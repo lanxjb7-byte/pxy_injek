@@ -1,34 +1,50 @@
+
 name: Build Android APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Set up Java
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Extract project ZIP
+        run: |
+          test -f PXY_INJEKTOR_Java_GitHub_Build.zip
+          mkdir -p project
+          unzip -oq PXY_INJEKTOR_Java_GitHub_Build.zip -d project
+          test -f project/settings.gradle
+          test -f project/app/build.gradle
+
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+
+      - name: Build APK
+        run: gradle --no-daemon -p project assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PXY-INJEKTOR-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          
+          path: project/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
